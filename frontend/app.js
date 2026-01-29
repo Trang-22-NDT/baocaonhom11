@@ -1,21 +1,97 @@
 // ============= HELPER FUNCTIONS =============
+
+// Enhanced notification system
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  
+  const icons = {
+    success: '✅',
+    error: '❌',
+    warning: '⚠️',
+    info: 'ℹ️'
+  };
+  
+  notification.innerHTML = `
+    <span class="notification-icon">${icons[type]}</span>
+    <span class="notification-message">${message}</span>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Animate in
+  setTimeout(() => notification.classList.add('show'), 10);
+  
+  // Remove after 4 seconds
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => notification.remove(), 300);
+  }, 4000);
+}
+
+// Loading spinner
+function showLoading(buttonElement) {
+  const originalText = buttonElement.innerHTML;
+  buttonElement.innerHTML = '<span class="spinner"></span> Đang xử lý...';
+  buttonElement.disabled = true;
+  return () => {
+    buttonElement.innerHTML = originalText;
+    buttonElement.disabled = false;
+  };
+}
+
 async function postJSON(url, data) {
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(data)
-  });
-  return resp.json();
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    
+    if (!resp.ok) {
+      throw new Error(`HTTP error! status: ${resp.status}`);
+    }
+    
+    return resp.json();
+  } catch (error) {
+    showNotification('Lỗi kết nối: ' + error.message, 'error');
+    throw error;
+  }
 }
 
 async function getJSON(url) {
-  const resp = await fetch(url);
-  return resp.json();
+  try {
+    const resp = await fetch(url);
+    
+    if (!resp.ok) {
+      throw new Error(`HTTP error! status: ${resp.status}`);
+    }
+    
+    return resp.json();
+  } catch (error) {
+    showNotification('Lỗi kết nối: ' + error.message, 'error');
+    throw error;
+  }
 }
 
 function showResult(elementId, data) {
   const el = document.getElementById(elementId);
-  el.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+  
+  if (typeof data === 'string') {
+    el.innerHTML = data;
+  } else if (data.message && data.data) {
+    el.innerHTML = `
+      <div class="alert alert-success">
+        <strong>✅ ${data.message}</strong>
+        <pre>${JSON.stringify(data.data, null, 2)}</pre>
+      </div>
+    `;
+  } else {
+    el.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+  }
+  
+  // Auto scroll to result
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ============= TAB NAVIGATION =============
@@ -37,50 +113,83 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // Tạo lô sản phẩm
 document.getElementById('batchForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const data = {
-    batchId: document.getElementById('batchId').value.trim(),
-    product: document.getElementById('product').value.trim(),
-    producer: document.getElementById('producer').value.trim(),
-    farmLocation: document.getElementById('farmLocation').value.trim(),
-    area: document.getElementById('area').value.trim(),
-    plantingDate: document.getElementById('plantingDate').value,
-    notes: document.getElementById('notes').value.trim()
-  };
-  const res = await postJSON('/api/batch', data);
-  showResult('batchResult', res);
-  e.target.reset();
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const hideLoading = showLoading(submitBtn);
+  
+  try {
+    const data = {
+      batchId: document.getElementById('batchId').value.trim(),
+      product: document.getElementById('product').value.trim(),
+      producer: document.getElementById('producer').value.trim(),
+      farmLocation: document.getElementById('farmLocation').value.trim(),
+      area: document.getElementById('area').value.trim(),
+      plantingDate: document.getElementById('plantingDate').value,
+      notes: document.getElementById('notes').value.trim()
+    };
+    
+    const res = await postJSON('/api/batch', data);
+    showNotification(`Lô ${data.batchId} đã được tạo thành công!`, 'success');
+    showResult('batchResult', res);
+    e.target.reset();
+  } catch (error) {
+    showNotification('Không thể tạo lô sản phẩm', 'error');
+  } finally {
+    hideLoading();
+  }
 });
 
 // Hoạt động chăm sóc
 document.getElementById('farmingForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const batchId = document.getElementById('farmBatchId').value.trim();
-  const data = {
-    actor: document.getElementById('farmActor').value.trim(),
-    activity: document.getElementById('farmActivity').value,
-    fertilizer: document.getElementById('fertilizer').value.trim(),
-    pesticide: document.getElementById('pesticide').value.trim(),
-    notes: document.getElementById('farmNotes').value.trim()
-  };
-  const res = await postJSON(`/api/farming/${encodeURIComponent(batchId)}`, data);
-  showResult('farmingResult', res);
-  e.target.reset();
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const hideLoading = showLoading(submitBtn);
+  
+  try {
+    const batchId = document.getElementById('farmBatchId').value.trim();
+    const data = {
+      actor: document.getElementById('farmActor').value.trim(),
+      activity: document.getElementById('farmActivity').value,
+      fertilizer: document.getElementById('fertilizer').value.trim(),
+      pesticide: document.getElementById('pesticide').value.trim(),
+      notes: document.getElementById('farmNotes').value.trim()
+    };
+    
+    const res = await postJSON(`/api/farming/${encodeURIComponent(batchId)}`, data);
+    showNotification('Hoạt động chăm sóc đã được ghi nhận!', 'success');
+    showResult('farmingResult', res);
+    e.target.reset();
+  } catch (error) {
+    showNotification('Không thể ghi nhận hoạt động', 'error');
+  } finally {
+    hideLoading();
+  }
 });
 
 // Thu hoạch
 document.getElementById('harvestForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const batchId = document.getElementById('harvestBatchId').value.trim();
-  const data = {
-    actor: document.getElementById('harvestActor').value.trim(),
-    harvestDate: document.getElementById('harvestDate').value,
-    quantity: document.getElementById('quantity').value.trim(),
-    quality: document.getElementById('quality').value,
-    notes: document.getElementById('harvestNotes').value.trim()
-  };
-  const res = await postJSON(`/api/harvest/${encodeURIComponent(batchId)}`, data);
-  showResult('harvestResult', res);
-  e.target.reset();
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const hideLoading = showLoading(submitBtn);
+  
+  try {
+    const batchId = document.getElementById('harvestBatchId').value.trim();
+    const data = {
+      actor: document.getElementById('harvestActor').value.trim(),
+      harvestDate: document.getElementById('harvestDate').value,
+      quantity: document.getElementById('quantity').value.trim(),
+      quality: document.getElementById('quality').value,
+      notes: document.getElementById('harvestNotes').value.trim()
+    };
+    
+    const res = await postJSON(`/api/harvest/${encodeURIComponent(batchId)}`, data);
+    showNotification('Thu hoạch đã được ghi nhận!', 'success');
+    showResult('harvestResult', res);
+    e.target.reset();
+  } catch (error) {
+    showNotification('Không thể ghi nhận thu hoạch', 'error');
+  } finally {
+    hideLoading();
+  }
 });
 
 // ============= DOANH NGHIỆP FORMS =============

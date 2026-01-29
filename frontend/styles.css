@@ -885,3 +885,57 @@ button:disabled {
 .animate-bounce {
   animation: bounce 1s infinite;
 }
+
+/* ============= NOTIFICATION SYSTEM ============= */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: -400px;
+  min-width: 300px;
+  max-width: 400px;
+  padding: var(--spacing-lg);
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2xl);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  z-index: 9999;
+  transition: right 0.3s ease-out;
+  border-left: 4px solid;
+}
+
+.notification.show {
+  right: 20px;
+}
+
+.notification-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.notification-message {
+  flex: 1;
+  font-weight: 500;
+  color: var(--gray-800);
+}
+
+.notification-success {
+  border-color: var(--success);
+  background: var(--success-bg);
+}
+
+.notification-error {
+  border-color: var(--error);
+  background: var(--error-bg);
+}
+
+.notification-warning {
+  border-color: var(--warning);
+  background: var(--warning-bg);
+}
+
+.notification-info {
+  border-color: var(--info);
+  background: var(--info-bg);
+}
